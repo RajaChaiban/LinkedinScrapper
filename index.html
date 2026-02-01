@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Scraper Agent</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; }
+        .radio-group { display: flex; gap: 20px; }
+        button { padding: 10px 20px; background-color: #0073b1; color: white; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #005582; }
+        #results { margin-top: 20px; padding: 10px; border: 1px solid #ddd; display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>LinkedIn Scraper Agent</h1>
+
+    <div class="form-group">
+        <label for="company">Company</label>
+        <input type="text" id="company" name="company" placeholder="e.g. Google">
+    </div>
+
+    <div class="form-group">
+        <label for="location">Location</label>
+        <input type="text" id="location" name="location" placeholder="e.g. San Francisco">
+    </div>
+
+    <div class="form-group">
+        <label for="keywords">Keywords</label>
+        <input type="text" id="keywords" name="keywords" placeholder="e.g. Software Engineer, Python">
+    </div>
+
+    <div class="form-group">
+        <label>Search Type</label>
+        <div class="radio-group">
+            <label><input type="radio" name="searchType" value="jobs" checked> Jobs</label>
+            <label><input type="radio" name="searchType" value="recruiters"> Recruiters</label>
+        </div>
+    </div>
+
+    <button id="startBtn">Start Scraping</button>
+
+    <div id="results">
+        <h3>Agent Status:</h3>
+        <p id="statusMsg">Ready</p>
+        <pre id="outputData"></pre>
+    </div>
+
+    <script>
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            const statusDiv = document.getElementById('results');
+            const statusMsg = document.getElementById('statusMsg');
+            const outputData = document.getElementById('outputData');
+            
+            statusDiv.style.display = 'block';
+            statusMsg.textContent = 'Agent is initializing Apify scraper...';
+            outputData.textContent = '';
+
+            // Simulate API call/Agent work
+            setTimeout(() => {
+                statusMsg.textContent = 'Scraping in progress...';
+                
+                setTimeout(() => {
+                    const company = document.getElementById('company').value;
+                    const type = document.querySelector('input[name="searchType"]:checked').value;
+                    
+                    statusMsg.textContent = 'Completed!';
+                    outputData.textContent = JSON.stringify({
+                        status: "success",
+                        scraped_count: 5,
+                        filters: { company, type },
+                        data: [
+                            { title: "Senior AI Engineer", company: company, url: "https://linkedin.com/jobs/view/..." },
+                            { title: "Staff Engineer", company: company, url: "https://linkedin.com/jobs/view/..." }
+                        ]
+                    }, null, 2);
+                }, 1500);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# Environments
+.env
+.venv
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# Testing
+.pytest_cache/
+test-results/
+playwright-report/
+
+# IDEs
+.vscode/
+.idea/
+
+# Stitch
+.stitch-project.json
