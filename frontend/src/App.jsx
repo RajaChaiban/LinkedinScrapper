@@ -1,274 +1,274 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react'
+import { Rocket, Building2, MapPin, Search, Users, Briefcase, MessageSquare, Clock, Terminal } from 'lucide-react'
 
 function App() {
-  const [logs, setLogs] = useState([
-    { time: "10:42:01", type: "SYSTEM", msg: "Initializing neural processing unit...", color: "text-primary" },
-    { time: "10:42:05", type: "AUTH", msg: "Secure handshake established.", color: "text-green-500" }
-  ]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [scrapeTarget, setScrapeTarget] = useState('jobs');
-  
-  // Form State
+  const [scrapeTarget, setScrapeTarget] = useState('jobs') // 'jobs' or 'recruiters'
   const [formData, setFormData] = useState({
     company: '',
     location: '',
-    keywords: ''
-  });
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const addLog = (type, msg, color = "text-slate-300") => {
-    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-    setLogs(prev => [...prev, { time, type, msg, color }]);
-  };
+    keywords: '',
+    timePosted: '' // New field for minutes
+  })
+  const [status, setStatus] = useState('idle') // idle, running, completed
+  const [logs, setLogs] = useState([]) // Array of log messages
+  const [leads, setLeads] = useState([])
+  const [messageTemplate, setMessageTemplate] = useState("Hi {firstName}, I noticed you're hiring for {role} at {company}. I'd love to connect!")
 
   const handleLaunch = async () => {
-    if (!formData.company || !formData.location) {
-        addLog("ERROR", "Please fill in Company and Location.", "text-red-500");
-        return;
+    setStatus('running')
+    setLogs(['🚀 Initializing Human-Agent...'])
+    setLeads([]) // Clear previous results
+
+    // Construct Query Params
+    const queryParams = new URLSearchParams({
+      company: formData.company,
+      location: formData.location,
+      keywords: formData.keywords,
+      ...(formData.timePosted && { time_posted_minutes: formData.timePosted })
+    }).toString()
+
+    // Start EventSource connection
+    const eventSource = new EventSource(`http://localhost:8000/stream-scrape?${queryParams}`)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        
+        if (data.type === 'status') {
+          setLogs(prev => [...prev, `> ${data.message}`])
+        } else if (data.type === 'result') {
+          setLeads(data.data)
+          setLogs(prev => [...prev, '✅ Scrape Complete!'])
+          setStatus('completed')
+          eventSource.close()
+        } else if (data.type === 'error') {
+          setLogs(prev => [...prev, `❌ Error: ${data.message}`])
+          setStatus('error')
+          eventSource.close()
+        }
+      } catch (e) {
+        console.error("Error parsing SSE:", e)
+      }
     }
 
-    setIsLoading(true);
-    addLog("SYSTEM", "Starting AI Agent sequence...", "text-blue-400");
-    
-    try {
-      const response = await fetch('http://localhost:8000/launch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target_company: formData.company,
-          location: formData.location,
-          keywords: formData.keywords,
-          scrape_target: scrapeTarget
-        })
-      });
-      
-      const data = await response.json();
-      addLog("API", data.message, "text-green-400");
-      
-      // Simulate streaming logs for the demo visual
-      setTimeout(() => addLog("SCRAPER", `Targeting: ${formData.company}`, "text-primary"), 1000);
-      setTimeout(() => addLog("ANALYTICS", `Searching for ${scrapeTarget}...`, "text-yellow-500"), 2500);
-      setTimeout(() => {
-        addLog("SUCCESS", "Data extraction complete.", "text-green-500");
-        setIsLoading(false);
-      }, 5000);
-
-    } catch (error) {
-      addLog("ERROR", "Connection failed. Is backend running?", "text-red-500");
-      setIsLoading(false);
+    eventSource.onerror = (err) => {
+      console.error("EventSource failed:", err)
+      setLogs(prev => [...prev, '❌ Connection lost to agent.'])
+      setStatus('error')
+      eventSource.close()
     }
-  };
+  }
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden max-w-[480px] mx-auto shadow-2xl bg-[#0a192f] mesh-gradient font-display text-white selection:bg-primary/30">
-      <style>{`
-        :root {
-            --linkedin-blue: #0077B5;
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.15);
-        }
-        .mesh-gradient {
-            background-color: #0a192f;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(0, 119, 181, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(0, 119, 181, 0.1) 0px, transparent 50%),
-                radial-gradient(at 50% 50%, rgba(10, 25, 47, 1) 0px, transparent 100%);
-        }
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-        }
-        .terminal-bg {
-            background: rgba(5, 10, 20, 0.85);
-            backdrop-filter: blur(8px);
-        }
-        .toggle-glow {
-            box-shadow: 0 0 15px rgba(0, 119, 181, 0.3);
-        }
-        .button-glow {
-            box-shadow: 0 0 20px rgba(0, 119, 181, 0.4);
-        }
-      `}</style>
-
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Header */}
-      <div className="flex items-center p-4 pb-2 justify-between z-20">
-        <div className="flex size-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white cursor-pointer hover:bg-white/10 transition-colors">
-          <span className="material-symbols-outlined text-xl">menu_open</span>
-        </div>
-        <div className="flex flex-col items-center">
-          <h2 className="text-white text-base font-bold tracking-tight">AI Scraper</h2>
-          <div className="flex items-center gap-1">
-            <div className={`size-1.5 ${isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'} rounded-full`}></div>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">{isLoading ? 'Processing' : 'System Online'}</span>
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Rocket className="w-6 h-6 text-blue-600" />
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+              AutoApply Agent
+            </h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              status === 'running' ? 'bg-amber-100 text-amber-700 animate-pulse' : 
+              status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {status === 'running' ? 'Agent Active' : status === 'completed' ? 'Task Complete' : 'Ready'}
+            </span>
           </div>
         </div>
-        <div className="flex w-10 items-center justify-end">
-          <button className="flex size-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-xl">account_balance_wallet</span>
-          </button>
-        </div>
-      </div>
+      </header>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-6 pt-4 scrollbar-hide">
+      <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-12 gap-8">
         
-        {/* Configuration Card */}
-        <div className="glass-card rounded-[2rem] p-6 space-y-5">
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold tracking-tight">Campaign Setup</h3>
-            <p className="text-xs text-slate-400">Target specific LinkedIn datasets</p>
-          </div>
+        {/* Left Sidebar - Controls */}
+        <div className="col-span-12 lg:col-span-4 space-y-6">
           
-          <div className="space-y-4">
-            {/* Target Company */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Target Company</label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-xl">corporate_fare</span>
+          {/* Campaign Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-gray-500" />
+              Target Parameters
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Company</label>
                 <input 
-                  name="company"
+                  type="text" 
+                  placeholder="e.g. Google, Capital One"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                   value={formData.company}
-                  onChange={handleInputChange}
-                  className="w-full rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 h-14 pl-12 pr-4 text-sm placeholder:text-slate-500 transition-all" 
-                  placeholder="e.g. Microsoft, Tesla"
+                  onChange={(e) => setFormData({...formData, company: e.target.value})}
                 />
               </div>
-            </div>
 
-            {/* Location */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Location</label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-xl">explore</span>
-                <input 
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  className="w-full rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 h-14 pl-12 pr-4 text-sm placeholder:text-slate-500 transition-all" 
-                  placeholder="e.g. London, United Kingdom"
-                />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                  <input 
+                    type="text" 
+                    placeholder="e.g. New York, Remote"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Keywords */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Key Search Terms</label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-xl">psychology</span>
-                <input 
-                  name="keywords"
-                  value={formData.keywords}
-                  onChange={handleInputChange}
-                  className="w-full rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 h-14 pl-12 pr-4 text-sm placeholder:text-slate-500 transition-all" 
-                  placeholder="e.g. Head of Recruitment"
-                />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Software Engineer, Recruiter"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={formData.keywords}
+                    onChange={(e) => setFormData({...formData, keywords: e.target.value})}
+                  />
+                </div>
               </div>
+              
+              {/* New Time Filter Input */}
+               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Posted Within (Minutes)</label>
+                <div className="relative">
+                  <Clock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                  <input 
+                    type="number" 
+                    placeholder="e.g. 30 (Leave empty for any time)"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={formData.timePosted}
+                    onChange={(e) => setFormData({...formData, timePosted: e.target.value})}
+                  />
+                </div>
+              </div>
+
             </div>
           </div>
 
-          {/* Toggle Switch */}
-          <div className="pt-2">
-            <div className="relative p-1 bg-black/40 rounded-2xl flex items-center h-14 border border-white/5">
-              <div 
-                className={`absolute inset-y-1 w-1/2 bg-primary rounded-xl transition-all duration-300 toggle-glow ${scrapeTarget === 'jobs' ? 'left-1' : 'left-[calc(50%-4px)] translate-x-full'}`}
-              ></div>
+          {/* Mode Selector */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+            <div className="grid grid-cols-2 gap-1">
               <button 
                 onClick={() => setScrapeTarget('jobs')}
-                className={`flex-1 relative z-10 flex items-center justify-center gap-2 font-bold text-sm transition-colors ${scrapeTarget === 'jobs' ? 'text-white' : 'text-slate-400'}`}
+                className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  scrapeTarget === 'jobs' 
+                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
               >
-                <span className="material-symbols-outlined text-[18px]">work</span>
-                Jobs
+                <Briefcase className="w-4 h-4" />
+                Find Jobs
               </button>
               <button 
                 onClick={() => setScrapeTarget('recruiters')}
-                className={`flex-1 relative z-10 flex items-center justify-center gap-2 font-bold text-sm transition-colors ${scrapeTarget === 'recruiters' ? 'text-white' : 'text-slate-400'}`}
+                className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  scrapeTarget === 'recruiters' 
+                    ? 'bg-purple-50 text-purple-700 shadow-sm' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
               >
-                <span className="material-symbols-outlined text-[18px]">groups</span>
-                Recruiters
+                <Users className="w-4 h-4" />
+                Find Recruiters
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Launch Button */}
-        <button 
-          onClick={handleLaunch}
-          disabled={isLoading}
-          className="w-full relative group"
-        >
-          <div className="absolute -inset-1 bg-primary rounded-[2rem] blur opacity-30 group-hover:opacity-60 transition-opacity"></div>
-          <div className="relative flex items-center justify-center gap-4 bg-primary text-white h-20 rounded-[2rem] font-black text-xl button-glow border-t border-white/20 active:scale-[0.97] transition-all disabled:opacity-70 disabled:grayscale">
-            {isLoading ? (
-               <span className="material-symbols-outlined text-3xl animate-spin">refresh</span>
+          {/* Launch Button */}
+          <button 
+            onClick={handleLaunch}
+            disabled={status === 'running' || !formData.company}
+            className={`w-full py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all ${
+              status === 'running' 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+          >
+            {status === 'running' ? (
+              <>Running Agent...</>
             ) : (
-               <span className="material-symbols-outlined text-3xl">auto_awesome</span>
+              <>Launch Campaign <Rocket className="w-5 h-5" /></>
             )}
-            {isLoading ? 'Agent Active...' : 'Launch AI Agent'}
-          </div>
-        </button>
+          </button>
 
-        {/* Live Logs */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-lg">terminal</span>
-              <h4 className="text-xs font-black uppercase tracking-widest text-slate-300">Live Agent Stream</h4>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[9px] font-mono text-slate-500">v4.2.0-stable</span>
-              <div className={`size-2 bg-primary rounded-full shadow-[0_0_8px_#0077B5] ${isLoading ? 'animate-pulse' : ''}`}></div>
-            </div>
-          </div>
-
-          <div className="terminal-bg border border-white/10 rounded-3xl p-5 font-mono text-[11px] h-72 overflow-y-auto shadow-2xl relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-primary/10 blur-sm pointer-events-none"></div>
-            <div className="flex flex-col gap-3">
+          {/* Live Agent Logs */}
+          <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-4 h-64 flex flex-col">
+            <h3 className="text-gray-400 text-xs font-mono mb-2 flex items-center gap-2">
+              <Terminal className="w-3 h-3" /> AGENT LOGS
+            </h3>
+            <div className="flex-1 overflow-y-auto font-mono text-xs space-y-1 scrollbar-hide">
+              {logs.length === 0 && <span className="text-gray-600 italic">Ready to launch...</span>}
               {logs.map((log, i) => (
-                <div key={i} className="flex gap-3 items-start">
-                  <span className="text-slate-600 shrink-0">{log.time}</span>
-                  <div className="flex flex-col">
-                    <span className={`${log.color.replace('text-slate-300', 'text-primary')} font-bold`}>● {log.type || 'INFO'}</span>
-                    <span className="text-slate-300">{log.msg}</span>
-                  </div>
+                <div key={i} className="text-green-400 break-words animate-in fade-in slide-in-from-bottom-1">
+                  {log}
                 </div>
               ))}
-              <div className="flex gap-3 items-start opacity-50">
-                <span className="text-slate-600 shrink-0">...</span>
-                <div className="flex flex-col">
-                  <span className="text-slate-500 animate-pulse">Waiting for next packet block...</span>
-                </div>
-              </div>
+              <div id="log-end" />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Footer Nav */}
-      <div className="bg-[#050a14]/95 backdrop-blur-xl border-t border-white/5 flex justify-around items-center py-4 px-6 z-30">
-        <button className="flex flex-col items-center gap-1.5 text-primary">
-          <span className="material-symbols-outlined text-2xl fill-1">grid_view</span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Dashboard</span>
-        </button>
-        <button className="flex flex-col items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors">
-          <span className="material-symbols-outlined text-2xl">monitoring</span>
-          <span className="text-[9px] font-bold uppercase tracking-tighter">Insights</span>
-        </button>
-        <button className="flex flex-col items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors">
-          <span className="material-symbols-outlined text-2xl">inventory_2</span>
-          <span className="text-[9px] font-bold uppercase tracking-tighter">Exports</span>
-        </button>
-        <button className="flex flex-col items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors">
-          <span className="material-symbols-outlined text-2xl">settings_account_box</span>
-          <span className="text-[9px] font-bold uppercase tracking-tighter">Settings</span>
-        </button>
-      </div>
+        {/* Right Content - Results */}
+        <div className="col-span-12 lg:col-span-8 space-y-6">
+          
+          {scrapeTarget === 'jobs' ? (
+            // JOBS VIEW
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] flex flex-col">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h2 className="font-semibold text-lg">Found Jobs ({leads.length})</h2>
+              </div>
+              
+              <div className="flex-1 p-6 bg-gray-50/50 overflow-y-auto max-h-[700px]">
+                {leads.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
+                    <Briefcase className="w-12 h-12 opacity-20" />
+                    <p>No jobs scraped yet. Launch the agent to begin.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {leads.map((job, idx) => (
+                      <div key={idx} className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow group">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-blue-600 group-hover:underline cursor-pointer">
+                              {job.title}
+                            </h3>
+                            <div className="text-sm text-gray-600 mt-1 flex items-center gap-2">
+                              <Building2 className="w-3 h-3" /> {job.company}
+                              <span className="text-gray-300">|</span>
+                              <MapPin className="w-3 h-3" /> {job.location}
+                            </div>
+                          </div>
+                          <a href={job.url} target="_blank" rel="noreferrer" className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-gray-700 transition-colors">
+                            Apply
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            // RECRUITERS VIEW (Placeholder)
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] p-6">
+               <div className="text-center text-gray-500 mt-20">
+                 <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                 <p>Switch to 'Find Jobs' to test the Live Agent.</p>
+                 <p className="text-sm mt-2">Recruiter mode coming soon.</p>
+               </div>
+            </div>
+          )}
+        </div>
+
+      </main>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

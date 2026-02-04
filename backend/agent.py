@@ -18,9 +18,15 @@ class LinkedInAgent:
             print("Warning: APIFY_API_TOKEN not found. Agent running in simulation mode.")
             self.client = None
 
-    async def run(self, company: str, location: str, keywords: str, mode: str):
+    async def run(self, company: str, location: str, keywords: str, mode: str, message: str = None, leads: list = None):
         print(f"Agent starting: Target={company}, Location={location}, Mode={mode}")
         
+        # Phase 2: Outreach Mode (Simulated)
+        if leads and len(leads) > 0:
+            print(f"Starting outreach to {len(leads)} leads with message: {message[:30]}...")
+            await asyncio.sleep(3) # Simulate processing time
+            return f"OUTREACH COMPLETE: Sent connection requests to {len(leads)} recruiters at {company}."
+
         if not self.client:
             # Simulation mode for testing without costs
             await asyncio.sleep(2)
