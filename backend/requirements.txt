@@ -6,3 +6,8 @@ python-dotenv
 playwright
 beautifulsoup4
 playwright-stealth
+google-generativeai
+PyPDF2
+python-docx
+python-multipart
+reportlab
