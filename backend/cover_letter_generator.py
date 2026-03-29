@@ -3,7 +3,7 @@ Cover Letter Generator Module
 Generates personalized cover letters for job applications using Gemini.
 """
 
-from .resume_analyzer import _gemini_model, is_gemini_configured
+from resume_analyzer import _gemini_model, is_gemini_configured
 
 
 def generate_cover_letter(

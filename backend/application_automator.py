@@ -7,7 +7,7 @@ import time
 import random
 import os
 import json
-from .anti_detection import random_delay_sync, random_mouse_movement_sync
+from anti_detection import random_delay_sync, random_mouse_movement_sync
 
 
 class ApplicationAutomator:

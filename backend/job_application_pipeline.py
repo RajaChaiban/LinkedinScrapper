@@ -13,12 +13,12 @@ import time
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
-from .local_scraper import LocalLinkedInScraper
-from .resume_analyzer import analyze_job_fit, is_gemini_configured
-from .resume_customizer import customize_and_generate_pdf
-from .cover_letter_generator import generate_cover_letter
-from .application_automator import ApplicationAutomator
-from .anti_detection import random_delay_sync, random_mouse_movement_sync
+from local_scraper import LocalLinkedInScraper
+from resume_analyzer import analyze_job_fit, is_gemini_configured
+from resume_customizer import customize_and_generate_pdf
+from cover_letter_generator import generate_cover_letter
+from application_automator import ApplicationAutomator
+from anti_detection import random_delay_sync, random_mouse_movement_sync
 
 
 AUDIT_LOG_PATH = os.path.join(os.path.dirname(__file__), "audit_log.json")

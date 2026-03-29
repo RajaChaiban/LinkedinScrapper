@@ -16,7 +16,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
 
 # Reuse the Gemini model from resume_analyzer
-from backend.resume_analyzer import _gemini_model, is_gemini_configured
+from resume_analyzer import _gemini_model, is_gemini_configured
 
 
 def customize_resume(
